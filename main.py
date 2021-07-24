@@ -7,6 +7,8 @@ import seaborn as sns
 import numpy as np
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
+from apyori import apriori
+import math
 
 #Libs para analise dos pacotes
 from re import sub
@@ -33,13 +35,11 @@ class analizadorIE():
     def obter_probes(self):
         n = 0
         for rec in self.cap:
-
             n = n + 1
-            print(n)
             self.pacotesProbes.append(rec)
 
             if n == 5000:
-                break
+               break
 
     #Obtem o mac de um pacote
     def obterMac(self, rec):
@@ -89,7 +89,8 @@ class analizadorIE():
         data = {}
 
         data['MAC'] = wlan.sa
-
+        data['time_relative'] = rec.frame_info.time_relative
+        
         data['wlan_ht_capabilities']= ''
         data['wlan_ht_ampduparam'] = ''
         data['wlan_htex_capabilities'] = ''
@@ -167,27 +168,30 @@ class analizadorIE():
     def limparBancoDados(self):
         df = pd.read_csv("./dataBase.csv")
         
-        df_clean = df.dropna()
-
-        df_clean['wlan_ht_capabilities'] = [int(x,16) for x in df_clean['wlan_ht_capabilities']]
-        df_clean['wlan_ht_ampduparam'] = [int(x,16) for x in df_clean['wlan_ht_ampduparam']]
-        df_clean['wlan_htex_capabilities'] = [int(x,16) for x in df_clean['wlan_htex_capabilities']]
-        df_clean['wlan_ht_mcsset'] = [ x.split(':')[1].strip() for x in df_clean['wlan_ht_mcsset']]
-        df_clean['wlan_ht_mcsset_rxbitmask'] = [ int(x.split(' ')[9]) for x in df_clean['wlan_ht_mcsset_rxbitmask']]
-        df_clean['wlan_ht_mcsset_rxbitmask_0to7'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_0to7']]
-        df_clean['wlan_ht_mcsset_rxbitmask_8to15'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_8to15']]
-        df_clean['wlan_ht_mcsset_rxbitmask_16to23'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_16to23']]
-        df_clean['wlan_ht_mcsset_rxbitmask_24to31'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_24to31']]
-        df_clean['wlan_ht_mcsset_rxbitmask_32'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_32']]
-        df_clean['wlan_ht_mcsset_rxbitmask_33to38'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_33to38']]
-        df_clean['wlan_ht_mcsset_rxbitmask_39to52'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_39to52']]
-        df_clean['wlan_ht_mcsset_rxbitmask_53to76'] = [int(x,16) for x in df_clean['wlan_ht_mcsset_rxbitmask_53to76']]
-        df_clean['wlan_txbf'] = [int(x,16) for x in df_clean['wlan_txbf']]
+        df =  df.dropna()
+        
+        df_clean = pd.DataFrame()
 
         labelencoder = preprocessing.LabelEncoder()
-        df_clean['wlan_ht_mcsset'] = labelencoder.fit_transform(df_clean['wlan_ht_mcsset'])
-        df_clean['MAC'] = labelencoder.fit_transform(df_clean['MAC'])
-        
+        #df_clean['wlan_ht_mcsset'] = labelencoder.fit_transform(df_clean['wlan_ht_mcsset'])
+        df_clean['MAC'] = labelencoder.fit_transform(df['MAC'])           
+        df_clean['time_relative'] = [ x for x in df['time_relative'] ]
+
+        df_clean['wlan_ht_capabilities'] = [int(x,16) for x in df['wlan_ht_capabilities']]
+        df_clean['wlan_ht_ampduparam'] = [int(x,16) for x in df['wlan_ht_ampduparam']]
+        #df_clean['wlan_htex_capabilities'] = [int(x,16) for x in df'wlan_htex_capabilities']]
+        #df_clean['wlan_ht_mcsset'] = [ x.split(':')[1].strip() for x in df['wlan_ht_mcsset']]
+        df_clean['wlan_ht_mcsset_rxbitmask'] = [ int(x.split(' ')[9]) for x in df['wlan_ht_mcsset_rxbitmask']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_0to7'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_0to7']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_8to15'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_8to15']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_16to23'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_16to23']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_24to31'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_24to31']]
+        df_clean['wlan_ht_mcsset_rxbitmask_32'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_32']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_33to38'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_33to38']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_39to52'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_39to52']]
+        #df_clean['wlan_ht_mcsset_rxbitmask_53to76'] = [int(x,16) for x in df['wlan_ht_mcsset_rxbitmask_53to76']]
+        df_clean['wlan_txbf'] = [int(x,16) for x in df['wlan_txbf']]
+
         classes = list(labelencoder.classes_)
         intervalo = range(0,len(classes))
 
@@ -203,7 +207,7 @@ class analizadorIE():
         df_clean.to_csv("cleanDataBase.csv", index=False)
 
     #Rotina a ser executada para novos datasets
-    def rotinaPrimaria(self):
+    def exec_dataset(self):
         self.obter_probes()
         self.separarGlobaisLocais()
         self.salvarDadosGlobaisLocais()
@@ -217,7 +221,7 @@ class analizadorIE():
             
     #Rotina para datasets que ja tratados
     @staticmethod
-    def rotinaSecundaria():
+    def histogramas():
         fig,ax = plt.subplots(2)
         
          # Histograma Local + Global
@@ -255,7 +259,7 @@ class analizadorIE():
 
     #Hora da brincadeira
     @staticmethod
-    def rotinaTerciaria():
+    def kmeans():
         df = pd.read_csv("cleanDataBase.csv")
 
         tolerancia = 0.9
@@ -311,16 +315,58 @@ class analizadorIE():
 
             df_key.to_csv("./kmeans_data/"+str(key)+"group.csv", index=False)
 
+    @staticmethod
+    def apriori():
+        df = pd.read_csv("cleanDataBase.csv")
+        df_apriori = pd.DataFrame()
+
+        df_apriori['MAC'] = df['MAC']
+        df_apriori['time_relative'] = [ math.floor(x/1000) for x in df['time_relative']]
+
+        df_apriori = df_apriori.groupby(['time_relative'])
+
+        keys = df_apriori.groups.keys()
+
+        data = []
+
+        for key in keys:
+            data.append( df_apriori.get_group(key)['MAC'].values )
+
+        #print(data)
+
+        results = list(apriori(data, min_support=0.6,max_length=2)) 
+
+        items = []
+        supports = []
+
+        for i in results:
+            items.append(str(i.items).split('(')[1].split(')')[0])
+            supports.append(i.support)
+        
+        fig, ax = plt.subplots()
+        
+        sns.barplot(x=items, y=supports,)
+        
+        ax.set_ylim([0,1])
+        ax.set_xlabel('Items')
+        ax.set_ylabel('Porcentagem')
+        ax.set_title('Macs mais comprados.')
+
+        plt.show()
+
 if __name__ == "__main__":
 
     option = argv[1]
 
     if option == '0':
         obj = analizadorIE(argv[2])
-        obj.rotinaPrimaria()
+        obj.exec_dataset()
 
     elif option == '1':
-        analizadorIE.rotinaSecundaria()
+        analizadorIE.histogramas()
+
+    elif option == '2':
+        analizadorIE.kmeans()
 
     else:
-        analizadorIE.rotinaTerciaria()
+        analizadorIE.apriori()
